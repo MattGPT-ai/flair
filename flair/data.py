@@ -504,7 +504,7 @@ class _PartOfSentence(DataPoint, ABC):
         super().__init__()
         self.sentence: Sentence = sentence
 
-    def add_label(self, typename: str, value: str, score: float = 1.0, **metadata):
+    def add_label(self, typename: str, value: str, score: float = 1.0, **metadata) -> None:
         super().add_label(typename, value, score, **metadata)
         self.sentence.annotation_layers.setdefault(typename, []).append(Label(self, value, score, **metadata))
 
@@ -576,7 +576,7 @@ class Token(_PartOfSentence):
             return self.tags_proba_dist[tag_type]
         return []
 
-    def get_head(self):
+    def get_head(self) -> Optional["Token"]:
         return self.sentence.get_token(self.head_id)
 
     @property
@@ -592,7 +592,7 @@ class Token(_PartOfSentence):
         return self.start_position + len(self.text)
 
     @property
-    def embedding(self):
+    def embedding(self) -> torch.Tensor:
         return self.get_embedding()
 
     def __len__(self) -> int:
@@ -601,7 +601,7 @@ class Token(_PartOfSentence):
     def __repr__(self) -> str:
         return self.__str__()
 
-    def add_label(self, typename: str, value: str, score: float = 1.0, **metadata):
+    def add_label(self, typename: str, value: str, score: float = 1.0, **metadata) -> None:
         # The Token is a special _PartOfSentence in that it may be initialized without a Sentence.
         # therefore, labels get added only to the Sentence if it exists
         if self.sentence:
@@ -1127,7 +1127,7 @@ class Sentence(DataPoint):
 
         return re.sub(r"[\u0080-\u0099]", to_windows_1252, text)
 
-    def next_sentence(self):
+    def next_sentence(self) -> Optional["Sentence"]:
         """Get the next sentence in the document.
 
         This only works if context is set through dataloader or elsewhere
@@ -1144,7 +1144,7 @@ class Sentence(DataPoint):
 
         return None
 
-    def previous_sentence(self):
+    def previous_sentence(self) -> Optional["Sentence"]:
         """Get the previous sentence in the document.
 
         works only if context is set through dataloader or elsewhere
@@ -1346,9 +1346,9 @@ class Image(DataPoint):
 class Corpus(typing.Generic[T_co]):
     def __init__(
         self,
-        train: Optional[Dataset[T_co]] = None,
-        dev: Optional[Dataset[T_co]] = None,
-        test: Optional[Dataset[T_co]] = None,
+        train: Optional[Dataset[T_co] | List[T_co]] = None,
+        dev: Optional[Dataset[T_co] | List[T_co]] = None,
+        test: Optional[Dataset[T_co] | List[T_co]] = None,
         name: str = "corpus",
         sample_missing_splits: Union[bool, str] = True,
         random_seed: Optional[int] = None,
@@ -1536,7 +1536,7 @@ class Corpus(typing.Generic[T_co]):
         return json_data
 
     @staticmethod
-    def _obtain_statistics_for(sentences, name, tag_type) -> dict:
+    def _obtain_statistics_for(sentences: List[Sentence], name: str, tag_type: str) -> dict:
         if len(sentences) == 0:
             return {}
 
@@ -1777,7 +1777,7 @@ class Corpus(typing.Generic[T_co]):
             f"Total labels corrupted: {corrupted_count}. Resulting noise share: {round((corrupted_count / total_label_count) * 100, 2)}%."
         )
 
-    def get_label_distribution(self):
+    def get_label_distribution(self) -> DefaultDict[str, int]:
         class_to_count = defaultdict(lambda: 0)
         for sent in self.train:
             for label in sent.labels:
@@ -1875,7 +1875,7 @@ class ConcatFlairDataset(Dataset):
     cumulative_sizes: List[int]
 
     @staticmethod
-    def cumsum(sequence):
+    def cumsum(sequence: Iterable[typing.Sized]) -> List[int]:
         r, s = [], 0
         for e in sequence:
             length_of_e = len(e)
