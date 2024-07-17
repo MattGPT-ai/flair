@@ -263,7 +263,7 @@ class SequenceTagger(flair.nn.Classifier[Sentence]):
                 batch_first=True,
             )
         else:
-            raise Exception(f"Unknown RNN type: {rnn_type}. Please use either LSTM, GRU or RNN.")
+            raise ValueError(f"Unknown RNN type: {rnn_type}. Please use either LSTM, GRU or RNN.")
 
         return RNN
 

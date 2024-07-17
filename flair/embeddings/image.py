@@ -135,7 +135,7 @@ class NetworkImageEmbeddings(ImageEmbeddings):
 
             self.name = name
         else:
-            raise Exception(f"Image embeddings {name} not available.")
+            raise ValueError(f"Image embeddings {name} not available.")
 
     def _add_embeddings_internal(self, images: List[Image]):
         image_tensor = torch.stack([self.transforms(image.data) for image in images])
@@ -144,7 +144,7 @@ class NetworkImageEmbeddings(ImageEmbeddings):
             image_embeddings.view(image_embeddings.shape[:2]) if image_embeddings.dim() == 4 else image_embeddings
         )
         if image_embeddings.dim() != 2:
-            raise Exception(f"Unknown embedding shape of length {image_embeddings.dim()}")
+            raise ValueError(f"Unknown embedding shape of length {image_embeddings.dim()}")
         for image_id, image in enumerate(images):
             image.set_embedding(self.name, image_embeddings[image_id])
 

@@ -28,7 +28,7 @@ class WandbLoggingHandler(logging.Handler):
                 level=level,
             )
 
-        except Exception:
+        except Exception as e:
             self.handleError(record)
 
 

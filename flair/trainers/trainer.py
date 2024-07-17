@@ -12,6 +12,7 @@ from typing import List, Optional, Tuple, Type, Union
 import torch
 from torch.optim.sgd import SGD
 from torch.utils.data.dataset import ConcatDataset
+from transformer_smaller_training_vocab.utils import Dataset
 
 import flair
 import flair.nn
@@ -101,7 +102,7 @@ class ModelTrainer(Pluggable):
         else:
             return [batch]
 
-    def _get_train_data(self, train_with_dev, train_with_test):
+    def _get_train_data(self, train_with_dev: bool, train_with_test: bool) -> Dataset:
         # if training also uses dev/train data, include in training set
         train_data = self.corpus.train
 
@@ -147,7 +148,7 @@ class ModelTrainer(Pluggable):
         monitor_train_sample: float = 0.0,
         use_final_model_for_eval: bool = False,
         gold_label_dictionary_for_eval: Optional[Dictionary] = None,
-        exclude_labels: List[str] = [],
+        exclude_labels: Optional[List[str]] = None,
         # sampling and shuffling
         sampler=None,
         shuffle: bool = True,
@@ -168,6 +169,8 @@ class ModelTrainer(Pluggable):
         attach_default_scheduler: bool = True,
         **kwargs,
     ):
+        if exclude_labels is None:
+            exclude_labels = []
         if plugins is None:
             plugins = []
 
@@ -220,9 +223,9 @@ class ModelTrainer(Pluggable):
         monitor_train_sample: float = 0.0,
         use_final_model_for_eval: bool = True,
         gold_label_dictionary_for_eval: Optional[Dictionary] = None,
-        exclude_labels: List[str] = [],
+        exclude_labels: List[str] = None,
         # sampling and shuffling
-        sampler=None,
+        sampler: Optional[FlairSampler] = None,
         shuffle: bool = True,
         shuffle_first_epoch: bool = True,
         # evaluation and monitoring
@@ -244,6 +247,8 @@ class ModelTrainer(Pluggable):
         **kwargs,
     ):
         # annealing logic
+        if exclude_labels is None:
+            exclude_labels = []
         if plugins is None:
             plugins = []
 
@@ -313,7 +318,7 @@ class ModelTrainer(Pluggable):
         monitor_train_sample: float = 0.0,
         use_final_model_for_eval: bool = False,
         gold_label_dictionary_for_eval: Optional[Dictionary] = None,
-        exclude_labels: List[str] = [],
+        exclude_labels: List[str] = None,
         # sampling and shuffling
         sampler: Optional[FlairSampler] = None,
         shuffle: bool = True,
@@ -332,7 +337,7 @@ class ModelTrainer(Pluggable):
         # amp
         use_amp: bool = False,
         # plugins
-        plugins: List[TrainerPlugin] = [],
+        plugins: List[TrainerPlugin] = None,
         **kwargs,
     ) -> dict:
         """Trains any class that implements the flair.nn.Model interface.
@@ -382,6 +387,10 @@ class ModelTrainer(Pluggable):
             additional information to this dictionary, such as the :class:`flair.trainers.plugins.MetricHistoryPlugin`
         """
         # Create output folder
+        if plugins is None:
+            plugins = []
+        if exclude_labels is None:
+            exclude_labels = []
         base_path = Path(base_path)
         base_path.mkdir(exist_ok=True, parents=True)
 

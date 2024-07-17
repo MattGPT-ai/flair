@@ -27,8 +27,8 @@ class ParallelTextCorpus(Corpus):
         target_file: Union[str, Path],
         name: str,
         use_tokenizer: bool = True,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
         in_memory: bool = True,
         **corpusargs,
     ) -> None:
@@ -64,15 +64,15 @@ class OpusParallelCorpus(ParallelTextCorpus):
         l1: str,
         l2: str,
         use_tokenizer: bool = True,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
         in_memory: bool = True,
         **corpusargs,
     ) -> None:
         """Instantiates a Parallel Corpus from OPUS.
 
         see http://opus.nlpl.eu/
-        :param dataset: Name of the dataset (one of "tatoeba")
+        :param dataset: Name of the dataset (one of "tatoeba", "subtitles")
         :param l1: Language code of first language in pair ("en", "de", etc.)
         :param l2: Language code of second language in pair ("en", "de", etc.)
         :param use_tokenizer: Whether or not to use in-built tokenizer
@@ -96,11 +96,14 @@ class OpusParallelCorpus(ParallelTextCorpus):
             l2_file = flair.cache_root / "datasets" / dataset / f"{l1}-{l2}" / f"Tatoeba.{l1}-{l2}.{l2}"
 
         # set file names
-        if dataset == "subtitles":
+        elif dataset == "subtitles":
             link = f"https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2018/moses/{l1}-{l2}.txt.zip"
 
             l1_file = flair.cache_root / "datasets" / dataset / f"{l1}-{l2}" / f"OpenSubtitles.{l1}-{l2}.{l1}"
             l2_file = flair.cache_root / "datasets" / dataset / f"{l1}-{l2}" / f"OpenSubtitles.{l1}-{l2}.{l2}"
+
+        else:  # can't get here because of above check
+            raise ValueError(f"Dataset must be one of: {supported_datasets}")
 
         # download and unzip in file structure if necessary
         if not l1_file.exists():
@@ -125,9 +128,9 @@ class ParallelTextDataset(FlairDataset):
         self,
         path_to_source: Union[str, Path],
         path_to_target: Union[str, Path],
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
     ) -> None:
         path_to_source = Path(path_to_source)
@@ -177,7 +180,7 @@ class ParallelTextDataset(FlairDataset):
 
                 self.total_sentence_count += 1
 
-    def _make_bi_sentence(self, source_line: str, target_line: str):
+    def _make_bi_sentence(self, source_line: str, target_line: str) -> TextPair:
         source_sentence = Sentence(source_line, use_tokenizer=self.use_tokenizer)
         target_sentence = Sentence(target_line, use_tokenizer=self.use_tokenizer)
 
@@ -204,16 +207,16 @@ class DataPairCorpus(Corpus):
     def __init__(
         self,
         data_folder: Union[str, Path],
-        columns: List[int] = [0, 1, 2],
-        train_file=None,
-        test_file=None,
-        dev_file=None,
+        columns: List[int] = None,
+        train_file: os.PathLike = None,
+        test_file: os.PathLike = None,
+        dev_file: os.PathLike = None,
         use_tokenizer: bool = True,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
         in_memory: bool = True,
         label_type: Optional[str] = None,
-        autofind_splits=True,
+        autofind_splits: bool = True,
         sample_missing_splits: bool = True,
         skip_first_line: bool = False,
         separator: str = "\t",
@@ -243,6 +246,7 @@ class DataPairCorpus(Corpus):
 
         :return: a Corpus with annotated train, dev and test data
         """
+        columns = (0, 1, 2) if columns is None else columns
         # find train, dev and test files if not specified
         dev_file, test_file, train_file = find_train_dev_test_files(
             data_folder,
@@ -318,10 +322,10 @@ class DataPairDataset(FlairDataset):
     def __init__(
         self,
         path_to_data: Union[str, Path],
-        columns: List[int] = [0, 1, 2],
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        columns: List[int] = None,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
         label_type: Optional[str] = None,
         skip_first_line: bool = False,
@@ -349,6 +353,8 @@ class DataPairDataset(FlairDataset):
             encoding: Encoding of the data file
             label: If False, the dataset expects unlabeled data
         """
+        if columns is None:
+            columns = [0, 1, 2]
         path_to_data = Path(path_to_data)
 
         # stop if file does not exist
@@ -409,7 +415,7 @@ class DataPairDataset(FlairDataset):
                 source_line = source_file.readline()
 
     # create a DataPair object from strings
-    def _make_data_pair(self, first_element: str, second_element: str, label: Optional[str] = None):
+    def _make_data_pair(self, first_element: str, second_element: str, label: Optional[str] = None) -> TextPair:
         first_sentence = Sentence(first_element, use_tokenizer=self.use_tokenizer)
         second_sentence = Sentence(second_element, use_tokenizer=self.use_tokenizer)
 
@@ -448,13 +454,13 @@ class DataTripleCorpus(Corpus):
     def __init__(
         self,
         data_folder: Union[str, Path],
-        columns: List[int] = [0, 1, 2, 3],
+        columns: Optional[List[int]] = None,
         train_file=None,
         test_file=None,
         dev_file=None,
         use_tokenizer: bool = True,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
         in_memory: bool = True,
         label_type: Optional[str] = None,
         autofind_splits=True,
@@ -488,6 +494,8 @@ class DataTripleCorpus(Corpus):
 
         :return: a Corpus with annotated train, dev, and test data
         """
+        columns = (0, 1, 2, 3) if columns is None else columns
+
         # find train, dev, and test files if not specified
         dev_file, test_file, train_file = find_train_dev_test_files(
             data_folder,
@@ -563,12 +571,14 @@ class DataTripleDataset(FlairDataset):
     def __init__(
         self,
         path_to_data: Union[str, Path],
-        columns: List[int] = [0, 1, 2, 3],
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        columns: List[int] = (0, 1, 2, 3),
+        base_path: Optional[Union[str, Path]] = None,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
         label_type: Optional[str] = None,
+        #label_type: str = "entailment",
         skip_first_line: bool = False,
         separator: str = "\t",
         encoding: str = "utf-8",
@@ -595,6 +605,7 @@ class DataTripleDataset(FlairDataset):
         :param encoding: Encoding of the data file
         :param label: If False, the dataset expects unlabeled data
         """
+        #columns = (0, 1, 2, 3) if columns is None else columns
         path_to_data = Path(path_to_data)
 
         # stop if the file does not exist
@@ -704,11 +715,11 @@ class DataTripleDataset(FlairDataset):
 class GLUE_RTE(DataPairCorpus):
     def __init__(
         self,
-        label_type="entailment",
+        label_type: str = "entailment",
         base_path: Optional[Union[str, Path]] = None,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
         sample_missing_splits: bool = True,
     ) -> None:
@@ -788,9 +799,9 @@ class GLUE_MNLI(DataPairCorpus):
         label_type="entailment",
         evaluate_on_matched: bool = True,
         base_path: Optional[Union[str, Path]] = None,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
         sample_missing_splits: bool = True,
     ) -> None:
@@ -905,9 +916,9 @@ class GLUE_MRPC(DataPairCorpus):
         self,
         label_type="paraphrase",
         base_path: Optional[Union[str, Path]] = None,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
         sample_missing_splits: bool = True,
     ) -> None:
@@ -982,9 +993,9 @@ class GLUE_QNLI(DataPairCorpus):
         self,
         label_type="entailment",
         base_path: Optional[Union[str, Path]] = None,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
         sample_missing_splits: bool = True,
     ) -> None:
@@ -1065,9 +1076,9 @@ class GLUE_QQP(DataPairCorpus):
         self,
         label_type="paraphrase",
         base_path: Optional[Union[str, Path]] = None,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
         sample_missing_splits: bool = True,
     ) -> None:
@@ -1149,9 +1160,9 @@ class GLUE_WNLI(DataPairCorpus):
         self,
         label_type="entailment",
         base_path: Optional[Union[str, Path]] = None,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
         sample_missing_splits: bool = True,
     ) -> None:
@@ -1231,9 +1242,9 @@ class GLUE_STSB(DataPairCorpus):
         self,
         label_type="similarity",
         base_path: Optional[Union[str, Path]] = None,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
         sample_missing_splits: bool = True,
     ) -> None:
@@ -1305,9 +1316,9 @@ class SUPERGLUE_RTE(DataPairCorpus):
     def __init__(
         self,
         base_path: Optional[Union[str, Path]] = None,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
-        use_tokenizer=True,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
+        use_tokenizer: bool = True,
         in_memory: bool = True,
         sample_missing_splits: bool = True,
     ) -> None:

@@ -280,8 +280,8 @@ class LanguageModelTrainer:
                         data, targets = self._get_batch(train_data, i, sequence_length)
 
                         if not data.is_cuda and cuda.is_available():
-                            log.info("Batch %d is not on CUDA, training will be very slow" % (batch))
-                            raise Exception("data isnt on cuda")
+                            log.warning("Batch %d is not on CUDA, training will be very slow" % (batch))
+                            raise MemoryError("data isn't on cuda")
 
                         self.model.zero_grad()
                         optimizer.zero_grad()

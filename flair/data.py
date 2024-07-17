@@ -15,6 +15,7 @@ from torch.utils.data import Dataset, IterableDataset
 from torch.utils.data.dataset import ConcatDataset, Subset
 
 import flair
+from flair.embeddings import Embeddings
 from flair.file_utils import Tqdm
 from flair.tokenization import SegtokTokenizer, SpaceTokenizer, Tokenizer
 
@@ -1241,6 +1242,19 @@ class DataPair(DataPoint, typing.Generic[DT, DT2]):
     def embedding(self):
         return torch.cat([self.first.embedding, self.second.embedding])
 
+    def embed_jointly(self, embeddings: Embeddings) -> Embeddings:
+        """Concatenates both texts into a single sentence and embeds that Sentence"""
+        if self.concatenated_data is None:
+            concatenated_sentence = Sentence(
+                self.first.to_tokenized_string()
+                + self.sep
+                + self.second.to_tokenized_string(),
+                use_tokenizer=False,
+            )
+            self.concatenated_data = concatenated_sentence
+        embeddings.embed(self.concatenated_data)
+        return self.concatenated_data.get_embedding(embedding_names)
+
     def __len__(self) -> int:
         return len(self.first) + len(self.second)
 
@@ -1346,9 +1360,9 @@ class Image(DataPoint):
 class Corpus(typing.Generic[T_co]):
     def __init__(
         self,
-        train: Optional[Dataset[T_co]] = None,
-        dev: Optional[Dataset[T_co]] = None,
-        test: Optional[Dataset[T_co]] = None,
+        train: Optional[Dataset[T_co] | List[T_co]] = None,
+        dev: Optional[Dataset[T_co] | List[T_co]] = None,
+        test: Optional[Dataset[T_co] | List[T_co]] = None,
         name: str = "corpus",
         sample_missing_splits: Union[bool, str] = True,
         random_seed: Optional[int] = None,
@@ -1875,7 +1889,7 @@ class ConcatFlairDataset(Dataset):
     cumulative_sizes: List[int]
 
     @staticmethod
-    def cumsum(sequence):
+    def cumsum(sequence: Iterable[typing.Sized]) -> List[int]:
         r, s = [], 0
         for e in sequence:
             length_of_e = len(e)

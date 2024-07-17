@@ -696,7 +696,7 @@ class ColumnDataset(FlairDataset):
                         value = self._remap_label(label)
                         if value != "O":
                             span.add_label(span_level_tag_columns[span_column], value=value, score=score)
-                except Exception:
+                except Exception as e:
                     pass
 
         for comment in comments:
@@ -2983,9 +2983,12 @@ class NER_MASAKHANE(MultiCorpus):
         supported_versions = ["v1", "v2"]
 
         if version not in supported_versions:
-            log.error(f"The specified version '{version}' is not in the list of supported version!")
-            log.error(f"Supported versions are '{supported_versions}'!")
-            raise Exception
+            error_msg = (
+                f"The specified version '{version}' is not in the list of supported version!"
+                f"Supported versions are '{supported_versions}'!"
+            )
+            log.error(error_msg)
+            raise ValueError(error_msg)
 
         data_folder = base_path / dataset_name / version
 
@@ -3042,10 +3045,12 @@ class NER_MASAKHANE(MultiCorpus):
                 language = language_to_code[language]
 
             if language not in language_to_code.values():
-                log.error(f"Language '{language}' is not in list of supported languages!")
-                log.error(f"Supported are '{language_to_code.values()}'!")
-                log.error("Instantiate this Corpus for instance like so 'corpus = NER_MASAKHANE(languages='luo')'")
-                raise Exception
+                log.error(
+                    f"Language '{language}' is not in list of supported languages!"
+                    f"Supported are '{language_to_code.values()}'!"
+                    "Instantiate this Corpus for instance like so 'corpus = NER_MASAKHANE(languages='luo')'"
+                )
+                raise ValueError(f"Language '{language}' is not supported! Choose from: '{language_to_code.values()}'!")
 
             language_folder = data_folder / language
 
@@ -4684,9 +4689,11 @@ class NER_ICDAR_EUROPEANA(ColumnCorpus):
         supported_languages = ["fr", "nl"]
 
         if language not in supported_languages:
-            log.error(f"Language '{language}' is not in list of supported languages!")
-            log.error(f"Supported are '{supported_languages}'!")
-            raise Exception
+            log.error(
+                f"Language '{language}' is not in list of supported languages!"
+                f"Supported are '{supported_languages}'!"
+            )
+            raise ValueError(f"Language '{language}' is not supported! Choose from: '{supported_languages}'!")
 
         base_path = flair.cache_root / "datasets" if not base_path else Path(base_path)
 
@@ -4765,9 +4772,10 @@ class NER_NERMUD(MultiCorpus):
 
         for domain in domains:
             if domain not in supported_domains:
-                log.error(f"Domain '{domain}' is not in list of supported domains!")
-                log.error(f"Supported are '{supported_domains}'!")
-                raise Exception
+                log.error(
+                    f"Domain '{domain}' is not in list of supported domains!" f"Supported are '{supported_domains}'!"
+                )
+                raise ValueError("Domain is not supported!")
 
             domain_folder = data_folder / domain.lower()
 
@@ -5006,9 +5014,11 @@ class MASAKHA_POS(MultiCorpus):
         supported_versions = ["v1"]
 
         if version not in supported_versions:
-            log.error(f"The specified version '{version}' is not in the list of supported version!")
-            log.error(f"Supported versions are '{supported_versions}'!")
-            raise Exception
+            log.error(
+                f"The specified version '{version}' is not in the list of supported version!"
+                f"Supported versions are '{supported_versions}'!"
+            )
+            raise ValueError("Unsupported version")
 
         data_folder = base_path / dataset_name / version
 
@@ -5046,10 +5056,12 @@ class MASAKHA_POS(MultiCorpus):
         corpora: List[Corpus] = []
         for language in languages:
             if language not in supported_languages:
-                log.error(f"Language '{language}' is not in list of supported languages!")
-                log.error(f"Supported are '{supported_languages}'!")
-                log.error("Instantiate this Corpus for instance like so 'corpus = MASAKHA_POS(languages='bam')'")
-                raise Exception
+                log.error(
+                    f"Language '{language}' is not in list of supported languages!"
+                    f"Supported are '{supported_languages}'!"
+                    "Instantiate this Corpus for instance like so 'corpus = MASAKHA_POS(languages='bam')'"
+                )
+                raise ValueError("Unsupported language")
 
             language_folder = data_folder / language
 

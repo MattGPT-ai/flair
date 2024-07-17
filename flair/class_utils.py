@@ -43,3 +43,7 @@ def lazy_import(
     symbols = (first_symbol, *symbols)
 
     return [getattr(imported_module, symbol) for symbol in symbols]
+
+
+class StringLike(Protocol):
+    def __str__(self) -> str: ...

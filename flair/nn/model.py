@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import torch.nn
+from torch import Tensor
 from torch.nn.modules.loss import _Loss
 from torch.utils.data.dataset import Dataset
 from tqdm import tqdm
@@ -55,7 +56,7 @@ class Model(torch.nn.Module, typing.Generic[DT], ABC):
         embedding_storage_mode: str = "none",
         mini_batch_size: int = 32,
         main_evaluation_metric: Tuple[str, str] = ("micro avg", "f1-score"),
-        exclude_labels: List[str] = [],
+        exclude_labels: List[str] = None,
         gold_label_dictionary: Optional[Dictionary] = None,
         return_loss: bool = True,
         **kwargs,
@@ -80,6 +81,7 @@ class Model(torch.nn.Module, typing.Generic[DT], ABC):
         Returns:
             The evaluation results.
         """
+        exclude_labels = exclude_labels if exclude_labels is not None else []
         raise NotImplementedError
 
     def _get_state_dict(self):
@@ -107,7 +109,8 @@ class Model(torch.nn.Module, typing.Generic[DT], ABC):
         return model
 
     @staticmethod
-    def _fetch_model(model_name) -> str:
+    def _fetch_model(model_name: str) -> str:
+        # this seems to just return model name, not a model with that name
         return model_name
 
     def save(self, model_file: Union[str, Path], checkpoint: bool = False):
@@ -246,11 +249,13 @@ class Classifier(Model[DT], typing.Generic[DT], ReduceTransformerVocabMixin, ABC
         embedding_storage_mode: str = "none",
         mini_batch_size: int = 32,
         main_evaluation_metric: Tuple[str, str] = ("micro avg", "f1-score"),
-        exclude_labels: List[str] = [],
+        exclude_labels: List[str] = None,
         gold_label_dictionary: Optional[Dictionary] = None,
         return_loss: bool = True,
         **kwargs,
     ) -> Result:
+        exclude_labels = exclude_labels if exclude_labels is not None else []
+
         import numpy as np
         import sklearn
 
@@ -503,7 +508,7 @@ class Classifier(Model[DT], typing.Generic[DT], ReduceTransformerVocabMixin, ABC
         return_probabilities_for_all_classes: bool = False,
         verbose: bool = False,
         label_name: Optional[str] = None,
-        return_loss=False,
+        return_loss: bool = False,
         embedding_storage_mode="none",
     ):
         """Predicts the class labels for the given sentences.
@@ -521,7 +526,7 @@ class Classifier(Model[DT], typing.Generic[DT], ReduceTransformerVocabMixin, ABC
         """
         raise NotImplementedError
 
-    def _print_predictions(self, batch, gold_label_type):
+    def _print_predictions(self, batch, gold_label_type: str) -> List:
         lines = []
         for datapoint in batch:
             # check if there is a label mismatch
@@ -676,12 +681,12 @@ class DefaultClassifier(Classifier[DT], typing.Generic[DT, DT2], ABC):
         return self._multi_label_threshold
 
     @multi_label_threshold.setter
-    def multi_label_threshold(self, x):  # setter method
+    def multi_label_threshold(self, x: Union[Dict, float]):  # setter method
         if isinstance(x, dict):
             if "default" in x:
                 self._multi_label_threshold = x
             else:
-                raise Exception('multi_label_threshold dict should have a "default" key')
+                raise ValueError('multi_label_threshold dict should have a "default" key')
         else:
             self._multi_label_threshold = {"default": x}
 
@@ -710,7 +715,7 @@ class DefaultClassifier(Classifier[DT], typing.Generic[DT, DT2], ABC):
                 device=flair.device,
             )
 
-    def _encode_data_points(self, sentences: List[DT], data_points: List[DT2]):
+    def _encode_data_points(self, sentences: List[DT], data_points: List[DT2]) -> Tensor:
         # embed sentences
         if self.should_embed_sentence:
             self.embeddings.embed(sentences)
@@ -728,6 +733,7 @@ class DefaultClassifier(Classifier[DT], typing.Generic[DT, DT2], ABC):
         return data_point_tensor
 
     def _mask_scores(self, scores, data_points):
+        """This appears to do nothing"""
         return scores
 
     def forward_loss(self, sentences: List[DT]) -> Tuple[torch.Tensor, int]:

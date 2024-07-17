@@ -92,7 +92,7 @@ class TextClassifier(flair.nn.DefaultClassifier[Sentence, Sentence]):
         )
 
     @staticmethod
-    def _fetch_model(model_name) -> str:
+    def _fetch_model(model_name: str) -> str:
         model_map = {}
         hu_path: str = "https://nlp.informatik.hu-berlin.de/resources/models"
 
@@ -137,3 +137,7 @@ class TextClassifier(flair.nn.DefaultClassifier[Sentence, Sentence]):
         from typing import cast
 
         return cast("TextClassifier", super().load(model_path=model_path))
+
+
+text_classifier = TextClassifier()
+text_classifier.evaluate

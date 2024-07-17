@@ -84,6 +84,10 @@ def set_seed(seed: int):
     hf_set_seed(seed)
 
 
+class CudaError(Exception):
+    """Specifies an error with CUDA / GPU configuration"""
+
+
 __all__ = [
     "cache_root",
     "device",

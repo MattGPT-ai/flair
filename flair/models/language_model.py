@@ -345,7 +345,8 @@ class LanguageModel(nn.Module):
                 # try sampling multinomial distribution for next character
                 try:
                     word_idx = torch.multinomial(word_weights, 1)[0]
-                except:  # noqa: E722 TODO: figure out exception type
+                except Exception as e:  # noqa: E722 TODO: figure out exception type
+                    print(type(e))#, file=sys.stderr)
                     word_idx = torch.tensor(0)
 
                 # print(word_idx)

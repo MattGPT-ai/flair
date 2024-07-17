@@ -5,7 +5,7 @@ from enum import Enum
 from functools import reduce
 from math import inf
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import mean_absolute_error, mean_squared_error
@@ -13,6 +13,7 @@ from torch.optim import Optimizer
 from torch.utils.data import Dataset
 
 import flair
+from flair.class_utils import StringLike
 from flair.data import DT, Dictionary, Sentence, _iter_dataset
 
 log = logging.getLogger("flair")
@@ -23,9 +24,13 @@ class Result:
         self,
         main_score: float,
         detailed_results: str,
-        classification_report: dict = {},
-        scores: dict = {},
+        classification_report: dict = None,
+        scores: dict = None,
     ) -> None:
+        if scores is None:
+            scores = {}
+        if classification_report is None:
+            classification_report = {}
         assert "loss" in scores, "No loss provided."
 
         self.main_score: float = main_score
@@ -68,7 +73,7 @@ class MetricRegression:
         return f"{self.mean_squared_error()}\t{self.mean_absolute_error()}\t{self.pearsonr()}\t{self.spearmanr()}"
 
     @staticmethod
-    def tsv_header(prefix=None):
+    def tsv_header(prefix: StringLike = None):
         if prefix:
             return f"{prefix}_MEAN_SQUARED_ERROR\t{prefix}_MEAN_ABSOLUTE_ERROR\t{prefix}_PEARSON\t{prefix}_SPEARMAN"
 
@@ -99,13 +104,14 @@ class WeightExtractor:
         self.weights_dict: Dict[str, Dict[int, List[float]]] = defaultdict(lambda: defaultdict(list))
         self.number_of_weights = number_of_weights
 
-    def extract_weights(self, state_dict, iteration):
+    def extract_weights(self, state_dict: Dict, iteration: int):
         for key in state_dict:
             vec = state_dict[key]
-            # print(vec)
+            # log.debug(vec)
             try:
                 weights_to_watch = min(self.number_of_weights, reduce(lambda x, y: x * y, list(vec.size())))
-            except Exception:
+            except Exception as e:
+                log.debug(e)
                 continue
 
             if key not in self.weights_dict:
@@ -193,15 +199,15 @@ class AnnealOnPlateau:
     def __init__(
         self,
         optimizer,
-        mode="min",
-        aux_mode="min",
-        factor=0.1,
-        patience=10,
+        mode: str = "min",
+        aux_mode: str = "min",
+        factor: float = 0.1,
+        patience: int = 10,
         initial_extra_patience=0,
-        verbose=False,
+        verbose: bool = False,
         cooldown=0,
-        min_lr=0,
-        eps=1e-8,
+        min_lr: float = 0.0,
+        eps: float = 1e-8,
     ) -> None:
         if factor >= 1.0:
             raise ValueError("Factor should be < 1.0.")
@@ -287,7 +293,7 @@ class AnnealOnPlateau:
 
         return reduce_learning_rate
 
-    def _reduce_lr(self, epoch):
+    def _reduce_lr(self, epoch: int):
         for i, param_group in enumerate(self.optimizer.param_groups):
             old_lr = float(param_group["lr"])
             new_lr = max(old_lr * self.factor, self.min_lrs[i])
@@ -300,7 +306,7 @@ class AnnealOnPlateau:
     def in_cooldown(self):
         return self.cooldown_counter > 0
 
-    def _init_is_better(self, mode):
+    def _init_is_better(self, mode: Literal["min", "max"]):
         if mode not in {"min", "max"}:
             raise ValueError("mode " + mode + " is unknown!")
 
@@ -311,10 +317,10 @@ class AnnealOnPlateau:
 
         self.mode = mode
 
-    def state_dict(self):
+    def state_dict(self) -> Dict:
         return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
 
-    def load_state_dict(self, state_dict):
+    def load_state_dict(self, state_dict: Dict):
         self.__dict__.update(state_dict)
         self._init_is_better(mode=self.mode)
 
@@ -348,11 +354,11 @@ def convert_labels_to_one_hot(label_list: List[List[str]], label_dict: Dictionar
     return [[1 if label in labels else 0 for label in label_dict.get_items()] for labels in label_list]
 
 
-def log_line(log):
+def log_line(log: logging.Logger) -> None:
     log.info("-" * 100, stacklevel=3)
 
 
-def add_file_handler(log, output_file):
+def add_file_handler(log: logging.Logger, output_file: Path) -> logging.FileHandler:
     init_output_file(output_file.parents[0], output_file.name)
     fh = logging.FileHandler(output_file, mode="w", encoding="utf-8")
     fh.setLevel(logging.INFO)
@@ -364,7 +370,7 @@ def add_file_handler(log, output_file):
 
 def store_embeddings(
     data_points: Union[List[DT], Dataset], storage_mode: str, dynamic_embeddings: Optional[List[str]] = None
-):
+) -> None:
     if isinstance(data_points, Dataset):
         data_points = list(_iter_dataset(data_points))
 
@@ -387,7 +393,7 @@ def store_embeddings(
             data_point.to("cpu", pin_memory=pin_memory)
 
 
-def identify_dynamic_embeddings(data_points: List[DT]):
+def identify_dynamic_embeddings(data_points: List[DT]) -> Optional[List[str]]:
     dynamic_embeddings = []
     all_embeddings = []
     for data_point in data_points:

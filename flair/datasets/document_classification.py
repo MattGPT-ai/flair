@@ -2,8 +2,9 @@ import csv
 import json
 import logging
 import os
+from os import PathLike
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 import flair
 from flair.data import (
@@ -19,6 +20,7 @@ from flair.file_utils import cached_path, unpack_file, unzip_file
 from flair.tokenization import SegtokTokenizer, SpaceTokenizer
 
 log = logging.getLogger("flair")
+MemoryMode = Literal["full", "partial", "disk"]
 
 
 class ClassificationCorpus(Corpus):
@@ -28,9 +30,9 @@ class ClassificationCorpus(Corpus):
         self,
         data_folder: Union[str, Path],
         label_type: str = "class",
-        train_file=None,
-        test_file=None,
-        dev_file=None,
+        train_file: PathLike = None,
+        test_file: PathLike = None,
+        dev_file: PathLike = None,
         truncate_to_max_tokens: int = -1,
         truncate_to_max_chars: int = -1,
         filter_if_longer_than: int = -1,
@@ -38,7 +40,7 @@ class ClassificationCorpus(Corpus):
         memory_mode: str = "partial",
         label_name_map: Optional[Dict[str, str]] = None,
         skip_labels: Optional[List[str]] = None,
-        allow_examples_without_labels=False,
+        allow_examples_without_labels: bool = False,
         sample_missing_splits: bool = True,
         encoding: str = "utf-8",
     ) -> None:
@@ -126,14 +128,14 @@ class ClassificationDataset(FlairDataset):
         self,
         path_to_file: Union[str, Path],
         label_type: str,
-        truncate_to_max_tokens=-1,
-        truncate_to_max_chars=-1,
+        truncate_to_max_tokens: int = -1,
+        truncate_to_max_chars: int = -1,
         filter_if_longer_than: int = -1,
         tokenizer: Union[bool, Tokenizer] = SegtokTokenizer(),
         memory_mode: str = "partial",
         label_name_map: Optional[Dict[str, str]] = None,
         skip_labels: Optional[List[str]] = None,
-        allow_examples_without_labels=False,
+        allow_examples_without_labels: bool = False,
         encoding: str = "utf-8",
     ) -> None:
         """Reads a data file for text classification.
@@ -168,7 +170,7 @@ class ClassificationDataset(FlairDataset):
         self.tokenizer = tokenizer
 
         if self.memory_mode == "full":
-            self.sentences = []
+            self.sentences: List[Sentence] = []
         if self.memory_mode == "partial":
             self.lines = []
         if self.memory_mode == "disk":
@@ -241,7 +243,9 @@ class ClassificationDataset(FlairDataset):
                 position = f.tell()
                 line = f.readline()
 
-    def _parse_line_to_sentence(self, line: str, label_prefix: str, tokenizer: Union[bool, Tokenizer]):
+    def _parse_line_to_sentence(
+        self, line: str, label_prefix: str, tokenizer: Union[bool, Tokenizer]
+    ) -> Optional[Sentence]:
         words = line.split()
 
         labels = []
@@ -312,11 +316,11 @@ class CSVClassificationCorpus(Corpus):
         column_name_map: Dict[int, str],
         label_type: str,
         name: str = "csv_corpus",
-        train_file=None,
-        test_file=None,
-        dev_file=None,
-        max_tokens_per_doc=-1,
-        max_chars_per_doc=-1,
+        train_file: PathLike = None,
+        test_file: PathLike = None,
+        dev_file: PathLike = None,
+        max_tokens_per_doc: int = -1,
+        max_chars_per_doc: int = -1,
         tokenizer: Tokenizer = SegtokTokenizer(),
         in_memory: bool = False,
         skip_header: bool = False,
@@ -427,6 +431,7 @@ class CSVClassificationDataset(FlairDataset):
         :param skip_header: If True, skips first line because it is header
         :param encoding: Most datasets are 'utf-8' but some are 'latin-1'
         :param fmtparams: additional parameters for the CSV file reader
+        :param no_class_label:
         :return: a Corpus with annotated train, dev and test data
         """
         path_to_file = Path(path_to_file)
@@ -577,7 +582,7 @@ class AMAZON_REVIEWS(ClassificationCorpus):
         skip_labels=["3.0", "4.0"],
         fraction_of_5_star_reviews: int = 10,
         tokenizer: Tokenizer = SegtokTokenizer(),
-        memory_mode="partial",
+        memory_mode: MemoryMode = "partial",
         **corpusargs,
     ) -> None:
         """Constructs corpus object.
@@ -705,7 +710,11 @@ class AMAZON_REVIEWS(ClassificationCorpus):
         )
 
     def download_and_prepare_amazon_product_file(
-        self, data_folder, part_name, max_data_points=None, fraction_of_5_star_reviews=None
+        self,
+        data_folder: Path,
+        part_name: str,
+        max_data_points: Optional[int] = None,
+        fraction_of_5_star_reviews: Optional[int] = None,  # not sure about these
     ):
         amazon__path = "http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall"
         cached_path(f"{amazon__path}/{part_name}", Path("datasets") / "Amazon_Product_Reviews")
@@ -752,7 +761,7 @@ class IMDB(ClassificationCorpus):
         base_path: Optional[Union[str, Path]] = None,
         rebalance_corpus: bool = True,
         tokenizer: Tokenizer = SegtokTokenizer(),
-        memory_mode="partial",
+        memory_mode: MemoryMode = "partial",
         **corpusargs,
     ) -> None:
         """Initialize the IMDB move review sentiment corpus.
@@ -917,7 +926,7 @@ class AGNEWS(ClassificationCorpus):
         self,
         base_path: Optional[Union[str, Path]] = None,
         tokenizer: Union[bool, Tokenizer] = SpaceTokenizer(),
-        memory_mode="partial",
+        memory_mode: MemoryMode = "partial",
         **corpusargs,
     ):
         """Instantiates AGNews Classification Corpus with 4 classes.
@@ -1458,7 +1467,7 @@ class GLUE_COLA(ClassificationCorpus):
 
     def __init__(
         self,
-        label_type="acceptability",
+        label_type: str = "acceptability",
         base_path: Optional[Union[str, Path]] = None,
         tokenizer: Tokenizer = SegtokTokenizer(),
         **corpusargs,
@@ -1735,7 +1744,7 @@ class TREC_50(ClassificationCorpus):
         self,
         base_path: Optional[Union[str, Path]] = None,
         tokenizer: Union[bool, Tokenizer] = SpaceTokenizer(),
-        memory_mode="full",
+        memory_mode: MemoryMode = "full",
         **corpusargs,
     ) -> None:
         """Instantiates TREC Question Classification Corpus with 6 classes.
@@ -1791,7 +1800,7 @@ class TREC_6(ClassificationCorpus):
         self,
         base_path: Optional[Union[str, Path]] = None,
         tokenizer: Union[bool, Tokenizer] = SpaceTokenizer(),
-        memory_mode="full",
+        memory_mode: MemoryMode = "full",
         **corpusargs,
     ) -> None:
         """Instantiates TREC Question Classification Corpus with 6 classes.
@@ -1849,7 +1858,7 @@ class YAHOO_ANSWERS(ClassificationCorpus):
         self,
         base_path: Optional[Union[str, Path]] = None,
         tokenizer: Union[bool, Tokenizer] = SpaceTokenizer(),
-        memory_mode="partial",
+        memory_mode: Literal["partial" "full", "none"] = "partial", #MemMode
         **corpusargs,
     ) -> None:
         """Instantiates YAHOO Question Classification Corpus with 10 classes.

@@ -452,7 +452,10 @@ class RE_ENGLISH_CONLL04(ColumnCorpus):
                 # We're inside a span.
                 span_end += 1
             else:
-                raise Exception("That should never happen.")
+                raise ValueError(
+                    f"Combination of BIO tag '{bio_tag}' and CONLL tag '{conll_tag}' are not valid!"
+                    f"That should never happen."
+                )
 
         # Last token might have been a part of a valid span.
         if active_conll_tag is not None:

@@ -1,10 +1,12 @@
 import logging
 from abc import abstractmethod
+from os import PathLike
 from pathlib import Path
-from typing import Generic, List, Optional, Union
+from typing import Callable, Generic, Iterable, List, Optional, Tuple, Union
 
 import torch.utils.data.dataloader
 from deprecated.sphinx import deprecated
+from torch.utils.data import Dataset, Sampler
 
 from flair.data import DT, FlairDataset, Sentence, Tokenizer
 from flair.tokenization import SegtokTokenizer, SpaceTokenizer
@@ -15,14 +17,14 @@ log = logging.getLogger("flair")
 class DataLoader(torch.utils.data.dataloader.DataLoader):
     def __init__(
         self,
-        dataset,
-        batch_size=1,
-        shuffle=False,
-        sampler=None,
-        batch_sampler=None,
-        drop_last=False,
-        timeout=0,
-        worker_init_fn=None,
+        dataset: Dataset, # [T_co]
+        batch_size: int = 1,
+        shuffle: bool = False,
+        sampler: Union[Sampler, Iterable, None] = None,
+        batch_sampler: Union[Sampler[List], Iterable[List], None] = None,
+        drop_last: bool = False,
+        timeout: float = 0,
+        worker_init_fn: Callable[[int], None] = None,
     ) -> None:
         super().__init__(
             dataset,
@@ -231,7 +233,9 @@ class MongoDataset(FlairDataset):
             return sentence
 
 
-def find_train_dev_test_files(data_folder, dev_file, test_file, train_file, autofind_splits=True):
+def find_train_dev_test_files(
+    data_folder: PathLike, dev_file: PathLike, test_file: PathLike, train_file: PathLike, autofind_splits: bool = True
+) -> Tuple[Path, Path, Path]:
     if isinstance(data_folder, str):
         data_folder: Path = Path(data_folder)
 
