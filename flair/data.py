@@ -1358,6 +1358,9 @@ class Image(DataPoint):
 
 
 class Corpus(typing.Generic[T_co]):
+    """Corpus of train, dev, and test datasets
+    :param train:"""
+
     def __init__(
         self,
         train: Optional[Dataset[T_co] | List[T_co]] = None,
@@ -1791,7 +1794,7 @@ class Corpus(typing.Generic[T_co]):
             f"Total labels corrupted: {corrupted_count}. Resulting noise share: {round((corrupted_count / total_label_count) * 100, 2)}%."
         )
 
-    def get_label_distribution(self):
+    def get_label_distribution(self) -> defaultdict[str, int]:
         class_to_count = defaultdict(lambda: 0)
         for sent in self.train:
             for label in sent.labels:
@@ -1953,7 +1956,12 @@ def randomly_split_into_two_datasets(
 ) -> Tuple[Subset, Subset]:
     """Shuffles a dataset and splits into two subsets.
 
-    The length of the first is specified and the remaining samples go into the second subset.
+    The length of the first is specified, and the remaining samples go into the second subset.
+    Args:
+        dataset: the dataset that is being split into two subsets
+        length_of_first: the number of samples that go into the first returned dataset
+        random_seed: sets the random state before shuffling indices
+    return: a tuple of two subsets of the original dataset
     """
     import random
 

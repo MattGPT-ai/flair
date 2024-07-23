@@ -2153,6 +2153,7 @@ class NER_ENGLISH_PERSON(ColumnCorpus):
         self,
         base_path: Optional[Union[str, Path]] = None,
         in_memory: bool = True,
+        **corpusargs,
     ) -> None:
         """Initialize the PERSON_NER corpus for person names.
 
@@ -2186,7 +2187,7 @@ class NER_ENGLISH_PERSON(ColumnCorpus):
 
         self.__concatAllFiles(data_folder)
 
-        super().__init__(data_folder, columns, in_memory=in_memory, train_file="bigFile.conll")
+        super().__init__(data_folder, columns, in_memory=in_memory, train_file="bigFile.conll", **corpusargs)
 
     @staticmethod
     def __concatAllFiles(data_folder):
